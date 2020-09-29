@@ -1115,6 +1115,160 @@ left_join(precip_df, month_df, by = &quot;month&quot;)</code></pre>
 ##  9  2018     9 10.5  September 
 ## 10  2018    10  2.12 October   
 ## # … with 14 more rows</code></pre>
+<p>Problem 2</p>
+<pre class="r"><code>nyc_transit_df = 
+  read_csv(&quot;./NYC_Transit_Subway_Entrance_And_Exit_Data.csv&quot;) %&gt;% 
+  janitor:: clean_names() %&gt;% 
+  select(line, station_name, station_latitude, station_longitude, starts_with(&quot;route&quot;), entry, vending, entrance_type, ada) %&gt;% 
+  mutate(
+    entry = ifelse(entry == &quot;YES&quot;, 1, 0)
+  )</code></pre>
+<pre><code>## Parsed with column specification:
+## cols(
+##   .default = col_character(),
+##   `Station Latitude` = col_double(),
+##   `Station Longitude` = col_double(),
+##   Route8 = col_double(),
+##   Route9 = col_double(),
+##   Route10 = col_double(),
+##   Route11 = col_double(),
+##   ADA = col_logical(),
+##   `Free Crossover` = col_logical(),
+##   `Entrance Latitude` = col_double(),
+##   `Entrance Longitude` = col_double()
+## )</code></pre>
+<pre><code>## See spec(...) for full column specifications.</code></pre>
+<pre class="r"><code>view(nyc_transit_df)</code></pre>
+<p>The nyc_transit dataset contains 19 variables.</p>
+<p>There are 465 distinct stations 84 are ADA compliant 5 in 465 entries without vending allow entrance</p>
+<pre class="r"><code>distinct_nyc_transit =
+  distinct(nyc_transit_df,
+           line,
+           station_name,
+           .keep_all = TRUE
+  )
+
+nrow(distinct_nyc_transit)</code></pre>
+<pre><code>## [1] 465</code></pre>
+<pre class="r"><code>filter(distinct_nyc_transit, ada == TRUE)</code></pre>
+<pre><code>## # A tibble: 84 x 19
+##    line  station_name station_latitude station_longitu… route1 route2 route3
+##    &lt;chr&gt; &lt;chr&gt;                   &lt;dbl&gt;            &lt;dbl&gt; &lt;chr&gt;  &lt;chr&gt;  &lt;chr&gt; 
+##  1 4 Av… Atlantic Av…             40.7            -74.0 B      Q      D     
+##  2 4 Av… DeKalb Av                40.7            -74.0 B      Q      R     
+##  3 4 Av… Pacific St               40.7            -74.0 B      Q      D     
+##  4 42nd… Grand Centr…             40.8            -74.0 GS     4      5     
+##  5 6 Av… 34th St                  40.7            -74.0 B      D      F     
+##  6 6 Av… 47-50th Sts…             40.8            -74.0 B      D      F     
+##  7 6 Av… Church Av                40.6            -74.0 F      &lt;NA&gt;   &lt;NA&gt;  
+##  8 63rd… 21st St                  40.8            -73.9 F      &lt;NA&gt;   &lt;NA&gt;  
+##  9 63rd… Lexington Av             40.8            -74.0 F      &lt;NA&gt;   &lt;NA&gt;  
+## 10 63rd… Roosevelt I…             40.8            -74.0 F      &lt;NA&gt;   &lt;NA&gt;  
+## # … with 74 more rows, and 12 more variables: route4 &lt;chr&gt;, route5 &lt;chr&gt;,
+## #   route6 &lt;chr&gt;, route7 &lt;chr&gt;, route8 &lt;dbl&gt;, route9 &lt;dbl&gt;, route10 &lt;dbl&gt;,
+## #   route11 &lt;dbl&gt;, entry &lt;dbl&gt;, vending &lt;chr&gt;, entrance_type &lt;chr&gt;, ada &lt;lgl&gt;</code></pre>
+<p>Wide format to long format</p>
+<p>We find that 60 distinct stations serve A train, and 924 distinct stations are ADA compliant.</p>
+<pre class="r"><code>distinct_nyc_longer = 
+  distinct_nyc_transit %&gt;% 
+  mutate(route8 = as.character(route8),
+         route9 = as.character(route9),
+         route10 = as.character(route10),
+         route11 = as.character(route11)) %&gt;% 
+  pivot_longer(
+    route1:route11,
+    names_to = &quot;routes&quot;,
+    values_to = &quot;trains&quot;) %&gt;% 
+  separate(routes, 
+           into = c(&quot;route_name&quot;, &quot;route_number&quot;), 
+           sep = 5)
+
+filter(distinct_nyc_longer, trains == &quot;A&quot;) %&gt;% 
+  nrow()</code></pre>
+<pre><code>## [1] 60</code></pre>
+<pre class="r"><code>filter(distinct_nyc_longer, ada == TRUE) %&gt;% 
+  nrow()</code></pre>
+<pre><code>## [1] 924</code></pre>
+<p>Problem 3</p>
+<pre class="r"><code>pols_df = 
+  read_csv(&quot;./fivethirtyeight_datasets/pols-month.csv&quot;) %&gt;% 
+  janitor::clean_names() %&gt;% 
+  separate(mon, into = c(&quot;year&quot;, &quot;month&quot;, &quot;day&quot;), sep = &quot;-&quot;) %&gt;% 
+  mutate(
+    month = month.name[as.numeric(month)],
+    president = ifelse(prez_gop == 1, &quot;republican&quot;, &quot;democrat&quot;)) %&gt;% 
+    select(-prez_gop, -prez_dem
+  )</code></pre>
+<pre><code>## Parsed with column specification:
+## cols(
+##   mon = col_date(format = &quot;&quot;),
+##   prez_gop = col_double(),
+##   gov_gop = col_double(),
+##   sen_gop = col_double(),
+##   rep_gop = col_double(),
+##   prez_dem = col_double(),
+##   gov_dem = col_double(),
+##   sen_dem = col_double(),
+##   rep_dem = col_double()
+## )</code></pre>
+<p>Now read the snp.csv</p>
+<pre class="r"><code>snp_df = 
+  read_csv(&quot;./fivethirtyeight_datasets/snp.csv&quot;) %&gt;% 
+  janitor:: clean_names() %&gt;% 
+  separate(date,
+           into = c(&quot;day&quot;, &quot;month&quot;, &quot;year&quot;), sep = &quot;/&quot;) %&gt;% 
+  arrange(year, month, day) %&gt;% 
+  mutate(
+    month = month.name[as.numeric(month)]) %&gt;% 
+  select(year, month, day, close)</code></pre>
+<pre><code>## Parsed with column specification:
+## cols(
+##   date = col_character(),
+##   close = col_double()
+## )</code></pre>
+<p>Next, we read the unemployment.csv</p>
+<pre class="r"><code>unemp_df = 
+  read_csv(&quot;./fivethirtyeight_datasets/unemployment.csv&quot;) %&gt;% 
+  janitor:: clean_names() %&gt;% 
+  pivot_longer(jan:dec,
+               names_to = &quot;month&quot;,
+               values_to = &quot;unemployment_rate&quot;) %&gt;% 
+  mutate(month = recode(month, `jan` = &quot;January&quot;,
+                        `feb` = &quot;February&quot;,
+                        `mar` = &quot;March&quot;,
+                        `apr` = &quot;April&quot;,
+                        `may` = &quot;May&quot;,
+                        `jun` = &quot;June&quot;,
+                        `jul` = &quot;July&quot;,
+                        `aug` = &quot;August&quot;,
+                        `sep` = &quot;September&quot;,
+                        `oct` = &quot;October&quot;,
+                        `nov` = &quot;November&quot;,
+                        `dec` = &quot;December&quot;),
+         year = as.character(year))</code></pre>
+<pre><code>## Parsed with column specification:
+## cols(
+##   Year = col_double(),
+##   Jan = col_double(),
+##   Feb = col_double(),
+##   Mar = col_double(),
+##   Apr = col_double(),
+##   May = col_double(),
+##   Jun = col_double(),
+##   Jul = col_double(),
+##   Aug = col_double(),
+##   Sep = col_double(),
+##   Oct = col_double(),
+##   Nov = col_double(),
+##   Dec = col_double()
+## )</code></pre>
+<p>Join them Note that the days in the pols_df are all 15, but no 15 exists in the snp_df. So the “close” column in snp_df does not show up in the joint data frame.</p>
+<pre class="r"><code>snp_and_pols_df = 
+  left_join(pols_df, snp_df)</code></pre>
+<pre><code>## Joining, by = c(&quot;year&quot;, &quot;month&quot;, &quot;day&quot;)</code></pre>
+<pre class="r"><code>final_df =
+  left_join(snp_and_pols_df, unemp_df)</code></pre>
+<pre><code>## Joining, by = c(&quot;year&quot;, &quot;month&quot;)</code></pre>
 </div>
 </div>
 
