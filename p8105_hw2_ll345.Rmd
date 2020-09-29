@@ -1,21 +1,19 @@
-Assignment 2
-================
-Leo Liu
-Sept 24 2020
-
-This is my solution to Assignment 2
+---
+title: "Assignment 2"
+author: Leo Liu
+output: github_document
+---
 
 ```{r}
 library(tidyverse)
 library(readxl)
-library(haven)
 ```
 
 ## Problem 1
 
-Read the Mr. Trashwheel dataset
+Read the Mr. Trashwheel dataset.
 
-```{r}
+```{r warning=FALSE}
 trashwheel_df = 
    read_xlsx(
      "./Trash-Wheel-Collection-Totals-8-6-19.xlsx",
@@ -64,10 +62,13 @@ precip_df =
 
 left_join(precip_df, month_df, by = "month")
 ```
+The dataset contains information from the Mr. Trashwheel collector in Baltimore, Maryland. The trashwheel collects the trash when it enters the inner harbor. The variables included are the dates (year, month, day) trash is collected, and the types of trash collected. 
+The total number of entries is `r nrow(trashwheel_df) ` in the final dataset. Additional information on precipitation is included in the rest of the excel sheets. The median number of sportsballs collected is `r median(pull(trashwheel_df, "sports_balls"))` and the total precipitation in 2018 is `r sum(pull(precip_2018, "total"))`. 
 
 
 Problem 2
 
+First, we want to read the csv file that contains the nyc transit information. Then, we want to use the r function clean_names to tidy up the variable names. We can choose the columns we want to keep using the r function select, and change the variable entry to logical. 
 ```{r}
 nyc_transit_df = 
   read_csv("./NYC_Transit_Subway_Entrance_And_Exit_Data.csv") %>% 
@@ -79,11 +80,9 @@ nyc_transit_df =
 view(nyc_transit_df)
 ```
 
-The nyc_transit dataset contains 19 variables. 
+The nyc_transit dataset contains 19 variables, including the lines, station names, stations' longitude and latitude, the route names and numbers, entry types, vending information, whether or not there is entry, and whether or not the station is ADA compliant. So far, we cleaned up the names, chose the columns we want to keep, and changed the variable "entry" to a logical value. 1 means entry is YES, 0 means entry is NO. The dataset now consists of `r nrow(nyc_transit_df)` rows and `r ncol(nyc_transit_df)` columns. However, more work is needed to be done. The dataset is not yet tidy. the route 1 to 11 should be condensed using pivot_longer. 
 
-There are 465 distinct stations
-84 are ADA compliant
-5 in 465 entries without vending allow entrance
+
 ```{r}
 distinct_nyc_transit =
   distinct(nyc_transit_df,
@@ -93,13 +92,14 @@ distinct_nyc_transit =
   )
 
 nrow(distinct_nyc_transit)
-
-filter(distinct_nyc_transit, ada == TRUE)
 ```
+There are `r nrow(distinct_nyc_transit)` distinct stations
+`r nrow(filter(distinct_nyc_transit, ada == TRUE))` are ADA compliant
+`r nrow(filter(distinct_nyc_transit, vending == "NO", entry == 1))` in `r nrow(filter(distinct_nyc_transit, vending == "NO"))` entries without vending allow entrance
 
-Wide format to long format
 
-We find that 60 distinct stations serve A train, and 924 distinct stations are ADA compliant.
+Since the above dataset is not yet tidy, let's tidy it up using pivot_longer (wide format to long format). I also need to separate routes with the route number. 
+
 ```{r}
 distinct_nyc_longer = 
   distinct_nyc_transit %>% 
@@ -115,16 +115,13 @@ distinct_nyc_longer =
            into = c("route_name", "route_number"), 
            sep = 5)
 
-filter(distinct_nyc_longer, trains == "A") %>% 
-  nrow()
-
-filter(distinct_nyc_longer, ada == TRUE) %>% 
-  nrow()
-
 ```
+We find that `r nrow(filter(distinct_nyc_longer, trains == "A"))` distinct stations serve A train, and `r nrow(filter(distinct_nyc_longer, ada == TRUE))` distinct stations are ADA compliant.
+
 
 Problem 3
 
+The following steps will clean the data names, break up the variable mon into integer variables (year, month, day), replace number with the month name, create a new variable "president" that take values from the "prez_dem" and "prez_gop" variables, and remove the variable "day".
 ```{r}
 pols_df = 
   read_csv("./fivethirtyeight_datasets/pols-month.csv") %>% 
@@ -135,10 +132,9 @@ pols_df =
     president = ifelse(prez_gop == 1, "republican", "democrat")) %>% 
     select(-prez_gop, -prez_dem
   )
-   
 ```
 
-Now read the snp.csv
+Now read the snp.csv file that contains the closing information. Again, we clean the data names, arrange the columns so that year and month are the leading columns. 
 
 ```{r}
 snp_df = 
@@ -154,7 +150,7 @@ snp_df =
 ```
  
  Next, we read the unemployment.csv
- 
+ and clean names, reformat the dataset into long format. 
 ```{r}
 unemp_df = 
   read_csv("./fivethirtyeight_datasets/unemployment.csv") %>% 
@@ -188,3 +184,11 @@ final_df =
   left_join(snp_and_pols_df, unemp_df)
 ```
 
+The pols.csv dataset contains observations of the number of national politicians who are democratic or republican at any given time. It includes the date of count, indicators of whether the president is democratic or republican, number of republican governors and senators on the given date, number of democratic governors and senators on the given date, number of democratic representatives on the given date, and the number of republican representatives on the given date. In the dataset after tidying, we used the variable "president" to replace the indicators. The final pols_df dataset has `r nrow(pols_df)` entries and `r ncol(pols_df)` columns.
+
+The snp.csv dataset contains information on Standard&Poor's stock market index. This dataset has date and close as variables. close is the closing values of the index on the given date. It has `r nrow(snp_df)` number of entries and 2 columns. 
+
+the unemp_df contains information on the unemployment rate in the given month and year. This dataset has `r nrow(unemp_df)` number of entries and `r ncol(unemp_df)` number of variables (columns).
+
+In the end, we left-joined the datasets snp and pols.This is supposed to provide information of the stock market ton top of the political information gathered. However, no additional information is added because all stock closing values are recorded on the 15th, and no information on the 15th is given in the pols dataset. 
+Lastly, left-joining the previous dataset with unemployment rate provides information on unemployment on top of the observations of the political environment. 
